@@ -7,8 +7,9 @@ import { SignInButton, SignOutButton, useUser } from "@clerk/nextjs";
 
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
-import { LoadingScreen } from "components/Loading";
+import Loading, { LoadingScreen } from "components/Loading";
 import { useState } from "react";
+import { toast } from "react-hot-toast";
 
 dayjs.extend(relativeTime);
 
@@ -17,14 +18,15 @@ const CreatePostWizard = () => {
   const [input, setInput] = useState<string>("");
 
   const ctx = api.useContext();
-  const { mutate, isLoading } = api.posts.create.useMutation(
-    {
-      onSuccess: () => {
-        setInput("");
-        ctx.posts.getAll.invalidate();
-      }
-    }
-  );
+  const { mutate, isLoading } = api.posts.create.useMutation({
+    onSuccess: () => {
+      setInput("");
+      ctx.posts.getAll.invalidate();
+    },
+    onError: (err) => {
+      toast.error("Failed to create post!");
+    },
+  });
 
   console.log(user);
   if (!user) {
@@ -46,15 +48,24 @@ const CreatePostWizard = () => {
         onChange={(e) => setInput(e.target.value)}
         disabled={isLoading}
       />
-      <button
-        onClick={() => {
-          mutate({
-            content: input,
-          });
-        }}
-      >
-        Post
-      </button>
+      {input != "" && !isLoading && (
+        <button
+          onClick={() => {
+            mutate({
+              content: input,
+            });
+          }}
+          disabled={isLoading}
+        >
+          Post
+        </button>
+      )}
+
+      {true && (
+        <div className="flex items-center justify-center">
+          <Loading />
+        </div>
+      )}
     </div>
   );
 };
