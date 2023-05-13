@@ -8,11 +8,23 @@ import { SignInButton, SignOutButton, useUser } from "@clerk/nextjs";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import { LoadingScreen } from "components/Loading";
+import { useState } from "react";
 
 dayjs.extend(relativeTime);
 
 const CreatePostWizard = () => {
   const { user } = useUser();
+  const [input, setInput] = useState<string>("");
+
+  const ctx = api.useContext();
+  const { mutate, isLoading } = api.posts.create.useMutation(
+    {
+      onSuccess: () => {
+        setInput("");
+        ctx.posts.getAll.invalidate();
+      }
+    }
+  );
 
   console.log(user);
   if (!user) {
@@ -29,7 +41,20 @@ const CreatePostWizard = () => {
       <input
         placeholder="Insert Emojis"
         className="grow bg-transparent outline-none"
+        type="text"
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        disabled={isLoading}
       />
+      <button
+        onClick={() => {
+          mutate({
+            content: input,
+          });
+        }}
+      >
+        Post
+      </button>
     </div>
   );
 };
@@ -53,7 +78,7 @@ const PostView = (props: PostWithUser) => {
             post.createdAt
           ).fromNow()}`}</span>
         </div>
-        <span>{post.content}</span>
+        <span className="text-xl">{post.content}</span>
       </div>
     </div>
   );
@@ -70,7 +95,7 @@ const Feed = () => {
 
   return (
     <div className="flex flex-col">
-      {[...data, ...data].map((fullPost) => (
+      {data.map((fullPost) => (
         <PostView {...fullPost} key={fullPost.post.id} />
       ))}
     </div>
@@ -78,12 +103,12 @@ const Feed = () => {
 };
 
 const Home: NextPage = () => {
-  const {  isLoaded: userLoading, isSignedIn } = useUser();
+  const { isLoaded, isSignedIn } = useUser();
 
   api.posts.getAll.useQuery();
 
-  if (userLoading) {
-    return <div/>;
+  if (!isLoaded) {
+    return <div />;
   }
 
   return (
@@ -104,7 +129,7 @@ const Home: NextPage = () => {
             {isSignedIn && <CreatePostWizard />}
           </div>
 
-          <Feed/>
+          <Feed />
         </div>
       </main>
     </>
